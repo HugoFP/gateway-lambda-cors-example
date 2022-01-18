@@ -12,9 +12,10 @@ Globals:
       - x86_64
     Timeout: 10
   Api:
-    EndpointConfiguration: REGIONAL
-    # Your CORS hosts need to be in this format - note the two layers of quotes.
-    Cors: "'*'"
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+      AllowOrigin: "'*'"
 
 Resources:
   YourFunction:
@@ -28,37 +29,3 @@ Resources:
           Properties:
             Path: /yourcallback
             Method: get
-            RestApiId:
-              Ref: YourAPIGateway
-
-  YourAPIGateway:
-    Type: AWS::Serverless::Api
-    DependsOn: YourFunction
-    Properties:
-      StageName: stage
-      DefinitionBody:
-        swagger: 2.0
-        info:
-          version: "1.0"
-          title: "A nice title"
-        basePath: /stage/v1
-        schemes:
-          - "https"
-        paths:
-          /callback:
-            get:
-              responses: {}
-              x-amazon-apigateway-integration:
-                uri:
-                  # You need to build up the ARN with this pattern - you can't just use a !Ref or !GetAtt AFAIK.
-                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${YourFunction.Arn}/invocations
-                passthroughBehavior: "when_no_match"
-                httpMethod: "POST"
-                type: "aws_proxy"
-
-  ConfigLambdaPermission:
-    Type: "AWS::Lambda::Permission"
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref YourFunction
-      Principal: apigateway.amazonaws.com
